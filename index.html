@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>RK LAB — Load Chart Forklift</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RK-Lab Load Chart">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f3ea; --bg-alt:#eee7d6; --panel:#fefcf8; --panel-alt:#f7f3ea;
+  --border:#e0d8c4; --border-soft:#ece5d4;
+  --ink:#1e3a5f; --ink-soft:#4a6785; --ink-dim:#8b95a1;
+  --accent:#1e3a5f; --accent-dim:#c3ccd6; --accent-soft:rgba(30,58,95,.08);
+  --mint:#d9534f; --ok:#2f6b3a; --line:#1e3a5f; --grid:#d3cab3;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  padding:calc(22px + env(safe-area-inset-top,0px)) 12px calc(60px + env(safe-area-inset-bottom,0px));min-height:100vh;}
+.wrap{max-width:480px;margin:0 auto;}
+.chassis{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 16px 22px;
+  box-shadow:0 6px 28px rgba(30,58,95,.14),0 1px 0 rgba(30,58,95,.06);}
+.nameplate{border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px;}
+.np-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.np-model{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-.3px;}
+.np-tag{font-size:10px;color:var(--bg);background:var(--mint);border-radius:6px;padding:4px 9px;letter-spacing:.4px;
+  white-space:nowrap;font-family:'Space Grotesk',sans-serif;font-weight:700;flex-shrink:0;margin-top:2px;}
+.np-desc{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.55;}
+.panel{background:var(--panel-alt);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+.panel-head{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;margin-bottom:12px;}
+.idx{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-dim);font-weight:700;font-size:11px;
+  width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.toggle-strip{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg-alt);padding:5px;border-radius:10px;border:1px solid var(--border);margin-top:12px;}
+.toggle-btn{padding:9px 4px;font-size:11.5px;color:var(--ink-soft);border-radius:7px;font-weight:600;background:transparent;border:none;cursor:pointer;font-family:inherit;}
+.toggle-btn.active{background:var(--accent);color:#fff;font-weight:700;}
+label{display:block;font-size:11px;color:var(--ink-soft);font-weight:600;margin:12px 0 6px;}
+.mfield label:first-child{margin-top:0;}
+input,select{width:100%;background:var(--bg-alt);border:1px solid var(--border);color:var(--ink);border-radius:9px;padding:10px 11px;
+  font-size:15px;font-family:'JetBrains Mono',monospace;}
+input:focus,select:focus{outline:none;border-color:var(--accent);}
+select{font-size:13px;}
+.mfield{display:none;margin-top:12px;}
+.mfield.active{display:block;}
+.hint{font-size:11px;color:var(--ink-dim);margin-top:6px;line-height:1.5;}
+button{font-family:inherit;cursor:pointer;}
+.full{width:100%;margin-top:14px;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;letter-spacing:.3px;}
+.full.ghost{background:transparent;color:var(--ink);border:1px solid var(--accent-dim);margin-top:8px;}
+.full:active,.toggle-btn:active{transform:translateY(1px);}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.lcd{background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.result{display:none;}
+.result.show{display:block;}
+.result.show + .empty{display:none;}
+.empty{font-size:12px;color:var(--ink-dim);}
+.status{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--accent-soft);color:var(--accent);
+  border:1px solid var(--accent-dim);font-family:'Space Grotesk',sans-serif;letter-spacing:.4px;margin-bottom:10px;}
+.num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;letter-spacing:-.3px;line-height:1.05;color:var(--accent);}
+.unit{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.result.ok .num{color:var(--ok);} .result.ok .status{color:var(--ok);border-color:var(--ok);background:rgba(47,107,58,.08);}
+.result.danger .num{color:var(--mint);} .result.danger .status{color:var(--mint);border-color:var(--mint);background:rgba(217,83,79,.1);}
+svg{width:100%;height:auto;display:block;background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;}
+.gridline{stroke:var(--grid);stroke-width:1;} .axis{stroke:var(--line);stroke-width:1.5;}
+.curve{fill:none;stroke-width:2.5;} .pt{stroke:var(--bg-alt);stroke-width:1.5;}
+.marker{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 3;}
+.axlabel{font-size:10px;fill:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
+.legend{display:flex;flex-wrap:wrap;margin-top:10px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-soft);margin:4px 12px 0 0;}
+.swatch{width:14px;height:3px;border-radius:2px;flex:0 0 auto;}
+details summary{list-style:none;cursor:pointer;}
+details summary::-webkit-details-marker{display:none;}
+details summary .panel-head{margin-bottom:0;}
+details[open] summary .panel-head{margin-bottom:12px;}
+.curve-edit{border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:10px;margin-bottom:8px;}
+.curve-edit-top{display:flex;gap:8px;align-items:center;}
+.curve-edit-top + .curve-edit-top{margin-top:8px;}
+.curve-edit-top input[type=text]{flex:1;min-width:0;font-size:12px;}
+.curve-edit-top input[type=color]{width:38px;height:38px;padding:2px;flex:0 0 auto;}
+.curve-edit-top input[type=number]{width:110px;flex:0 0 auto;font-size:12px;}
+.curve-edit-top .cPoints{flex:1;min-width:0;font-size:11px;}
+.curve-edit-top button{flex:0 0 auto;padding:9px 10px;font-size:11px;font-weight:600;background:transparent;color:var(--mint);border:1px solid var(--border);border-radius:8px;}
+.warn{font-size:11.5px;color:var(--ink-soft);line-height:1.6;padding:2px 4px 0;}
+.warn strong{color:var(--mint);}
+.stamp-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:0 4px;}
+.stamp{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:10px;letter-spacing:1px;color:var(--ink-dim);}
+.serial{font-size:10px;color:var(--ink-dim);font-family:'JetBrains Mono',monospace;}
+footer{text-align:center;color:var(--ink-dim);font-size:11px;margin-top:20px;opacity:.8;}
+@media (min-width:900px){body{padding-top:40px;} .wrap{max-width:720px;} .chassis{padding:18px 34px 22px;} .np-model{font-size:28px;} .np-desc{font-size:14px;}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="chassis">
+  <div class="nameplate">
+    <div class="np-top"><div class="np-model">LOAD CHART FORKLIFT</div><div class="np-tag">CHART-v1</div></div>
+    <div class="np-desc">Pilih yang mau dicari → isi data beban → pilih single / double tyre. Hasil dihitung dari interpolasi kurva plat kapasitas, lalu ditandai di grafik.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><span class="idx">1</span>MAU CARI APA?</div>
+    <select id="modeSel" aria-label="Mode hitung">
+      <option value="cap">Kapasitas maksimum (tau tinggi &amp; load center)</option>
+      <option value="lc">Load center maksimum (tau berat &amp; tinggi)</option>
+      <option value="h">Tinggi maksimum (tau berat &amp; load center)</option>
+      <option value="safe">Cek aman &amp; sisa kapasitas (tau semua)</option>
+      <option value="barang">Load center dari ukuran barang</option>
+    </select>
+    <div class="toggle-strip" id="tyreStrip">
+      <button type="button" class="toggle-btn active" data-double="0">SINGLE TYRE</button>
+      <button type="button" class="toggle-btn" data-double="1">DOUBLE TYRE</button>
+    </div>
+    <input type="checkbox" id="doubleTyre" hidden>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><span class="idx">2</span>DATA BEBAN</div>
+    <div id="f-cap" class="mfield">
+      <label for="cap_h">Tinggi angkat (mm)</label><input type="number" id="cap_h" placeholder="cth. 4600" min="0" step="any" inputmode="decimal">
+      <label for="cap_lc">Load center (mm)</label><input type="number" id="cap_lc" placeholder="cth. 900" min="0" step="any" inputmode="decimal">
+    </div>
+    <div id="f-lc" class="mfield">
+      <label for="lc_w">Berat beban (kg)</label><input type="number" id="lc_w" placeholder="cth. 2500" min="0" step="any" inputmode="decimal">
+      <label for="lc_h">Tinggi angkat (mm)</label><input type="number" id="lc_h" placeholder="cth. 4250" min="0" step="any" inputmode="decimal">
+    </div>
+    <div id="f-h" class="mfield">
+      <label for="h_w">Berat beban (kg)</label><input type="number" id="h_w" placeholder="cth. 3000" min="0" step="any" inputmode="decimal">
+      <label for="h_lc">Load center (mm)</label><input type="number" id="h_lc" placeholder="cth. 900" min="0" step="any" inputmode="decimal">
+    </div>
+    <div id="f-safe" class="mfield">
+      <label for="safe_h">Tinggi angkat (mm)</label><input type="number" id="safe_h" placeholder="cth. 4500" min="0" step="any" inputmode="decimal">
+      <label for="safe_lc">Load center (mm)</label><input type="number" id="safe_lc" placeholder="cth. 900" min="0" step="any" inputmode="decimal">
+      <label for="safe_w">Berat beban aktual (kg)</label><input type="number" id="safe_w" placeholder="cth. 1500" min="0" step="any" inputmode="decimal">
+    </div>
+    <div id="f-barang" class="mfield">
+      <label for="brg_p">Panjang barang searah garpu (mm)</label><input type="number" id="brg_p" placeholder="cth. 1200" min="0" step="any" inputmode="decimal">
+      <div class="hint">Asumsi barang ditaruh rata, ujung belakang nempel di sandaran garpu — load center = ½ panjang barang.</div>
+    </div>
+    <label for="sub" style="margin-top:14px;">Kurangi kapasitas krn attachment (kg)</label>
+    <input type="number" id="sub" placeholder="0" min="0" step="any" value="0" inputmode="decimal">
+    <div class="hint">Isi 0 kalau nggak pakai attachment.</div>
+    <button class="full" id="goBtn" type="button">HITUNG</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><span class="idx">3</span>HASIL BACAAN</div>
+    <div class="lcd">
+      <div class="result" id="result">
+        <span class="status" id="status">HASIL</span>
+        <div class="num" id="num">0</div>
+        <div class="unit" id="unit"></div>
+        <div class="hint" id="note"></div>
+      </div>
+      <div class="empty">Isi data di atas lalu tekan HITUNG.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><span class="idx">4</span>GRAFIK LOAD CHART</div>
+    <svg id="chart" viewBox="0 0 640 400" role="img" aria-label="Grafik kapasitas terhadap load center"></svg>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="panel">
+    <details>
+      <summary><div class="panel-head"><span class="idx">5</span>EDIT DATA KURVA</div></summary>
+      <div id="curveEditors"></div>
+      <button class="full ghost" id="addCurve" type="button">+ TAMBAH KURVA</button>
+      <div class="hint">Format titik: <code>load_center:kapasitas</code> dipisah koma. Isi juga "Tinggi (mm)" tiap kurva. Perubahan hanya berlaku selama halaman terbuka.</div>
+    </details>
+  </div>
+
+  <p class="warn"><strong>Peringatan.</strong> Data kurva Single &amp; Double Tyre masih perkiraan dari foto plat — cek ulang tiap titik dengan plat asli sebelum dipakai kerja sungguhan. Akurasi hasil = akurasi data yang dimasukkan.</p>
+
+  <div class="stamp-row"><div class="serial">LC-01</div><div class="stamp">RK LAB</div></div>
+</div>
+<footer>RK-Lab · Load Chart Forklift</footer>
+</div>
+
+<script>
+const PAD = {l:52,r:16,t:16,b:36};
+const W = 640, H = 400;
+const defaultColors = ['#B3341C','#2F6B3A','#1B4F8C','#8A4B0C','#6A2F8C'];
+
+let curves = [
+  {name:'[CEK ULANG] Single Tyre ~4250mm', tyre:'single', height:4250, color:defaultColors[0], points:[{x:500,y:2900},{x:700,y:2450},{x:900,y:2000},{x:1200,y:1500},{x:1400,y:1250},{x:1600,y:1050}]},
+  {name:'[CEK ULANG] Single Tyre ~4500mm', tyre:'single', height:4500, color:defaultColors[3], points:[{x:500,y:2800},{x:700,y:2350},{x:900,y:1900},{x:1200,y:1400},{x:1400,y:1150},{x:1600,y:950}]},
+  {name:'[CEK ULANG] Single Tyre ~4750mm', tyre:'single', height:4750, color:'#C98E00', points:[{x:500,y:2700},{x:700,y:2250},{x:900,y:1800},{x:1200,y:1300},{x:1400,y:1050},{x:1600,y:900}]},
+  {name:'[CEK ULANG] Double Tyre ~4750mm', tyre:'double', height:4750, color:defaultColors[1], points:[{x:500,y:2950},{x:700,y:2600},{x:900,y:2250},{x:1200,y:1750},{x:1400,y:1450},{x:1600,y:1200}]},
+  {name:'[CEK ULANG] Double Tyre ~5000mm', tyre:'double', height:5000, color:'#4C8A57', points:[{x:500,y:2900},{x:700,y:2500},{x:900,y:2150},{x:1200,y:1650},{x:1400,y:1350},{x:1600,y:1100}]},
+  {name:'[CEK ULANG] Double Tyre ~5500mm', tyre:'double', height:5500, color:defaultColors[2], points:[{x:500,y:2850},{x:700,y:2400},{x:900,y:2050},{x:1200,y:1550},{x:1400,y:1250},{x:1600,y:1000}]},
+  {name:'[CEK ULANG] Double Tyre ~6000mm', tyre:'double', height:6000, color:defaultColors[4], points:[{x:500,y:2800},{x:700,y:2300},{x:900,y:1950},{x:1200,y:1450},{x:1400,y:1150},{x:1600,y:900}]}
+];
+
+let marker = null;
+
+function currentTyre(){ return document.getElementById('doubleTyre').checked ? 'double' : 'single'; }
+function visibleCurves(){ return curves.filter(c=>(c.tyre||'single')===currentTyre()); }
+
+function pointsToStr(pts){ return pts.map(p=>p.x+':'+p.y).join(','); }
+function strToPoints(s){
+  return s.split(',').map(t=>t.trim()).filter(Boolean).map(t=>{
+    const [x,y] = t.split(':').map(v=>parseFloat(v));
+    return {x,y};
+  }).filter(p=>!isNaN(p.x)&&!isNaN(p.y)).sort((a,b)=>a.x-b.x);
+}
+
+function interp(pts, x){
+  if(!pts.length) return null;
+  if(x <= pts[0].x) return pts[0].y;
+  if(x >= pts[pts.length-1].x) return pts[pts.length-1].y;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i], c=pts[i+1];
+    if(x>=a.x && x<=c.x){
+      const t = (x-a.x)/(c.x-a.x || 1);
+      return a.y + t*(c.y-a.y);
+    }
+  }
+  return null;
+}
+
+function inverseInterp(pts, targetY){
+  if(!pts.length) return {status:'none'};
+  const first = pts[0], last = pts[pts.length-1];
+  if(targetY > first.y) return {status:'over'};
+  if(targetY <= last.y) return {status:'atmax', x:last.x};
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i], c=pts[i+1];
+    const yTop = Math.max(a.y,c.y), yBot = Math.min(a.y,c.y);
+    if(targetY<=yTop && targetY>=yBot){
+      const t = (targetY-a.y)/((c.y-a.y)||1);
+      return {status:'ok', x:a.x + t*(c.x-a.x)};
+    }
+  }
+  return {status:'none'};
+}
+
+// capacity at arbitrary (height, load center), interpolated across curves then within curve
+function capAt(h, lc){
+  const hc = visibleCurves()
+    .filter(c=>c.height!=null && !isNaN(c.height) && c.points.length>=2)
+    .map(c=>({x:c.height, y:interp(c.points, lc)}))
+    .filter(p=>p.y!==null)
+    .sort((a,b)=>a.x-b.x);
+  if(hc.length<2) return null;
+  return interp(hc, h);
+}
+function lcGrid(){
+  const xs = new Set();
+  visibleCurves().forEach(c=>c.points.forEach(p=>xs.add(p.x)));
+  return Array.from(xs).sort((a,b)=>a-b);
+}
+function heightsGrid(){
+  const xs = new Set();
+  visibleCurves().forEach(c=>{ if(c.height!=null && !isNaN(c.height)) xs.add(c.height); });
+  return Array.from(xs).sort((a,b)=>a-b);
+}
+
+function niceStep(range, count){
+  const raw = range/count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw||1)));
+  const norm = raw/mag;
+  let step = norm<1.5?1:norm<3?2:norm<7?5:10;
+  return step*mag;
+}
+
+function bounds(){
+  let xs=[], ys=[0];
+  visibleCurves().forEach(c=>c.points.forEach(p=>{xs.push(p.x); ys.push(p.y);}));
+  if(marker){ xs.push(marker.x); ys.push(marker.y); }
+  if(!xs.length){xs=[0,1200];}
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMax = Math.max(...ys) * 1.08 || 1000;
+  return {xMin, xMax, yMax};
+}
+function sx(x, b){ return PAD.l + (x - b.xMin) / (b.xMax - b.xMin || 1) * (W - PAD.l - PAD.r); }
+function sy(y, b){ return H - PAD.b - (y / (b.yMax || 1)) * (H - PAD.t - PAD.b); }
+
+function renderChart(){
+  const b = bounds();
+  const xStep = niceStep(b.xMax-b.xMin, 6);
+  const yStep = niceStep(b.yMax, 7);
+  let svg = '';
+  for(let y=0; y<=b.yMax; y+=yStep){
+    svg += `<line class="gridline" x1="${PAD.l}" y1="${sy(y,b)}" x2="${W-PAD.r}" y2="${sy(y,b)}"/>`;
+    svg += `<text class="axlabel" x="${PAD.l-6}" y="${sy(y,b)+3}" text-anchor="end">${Math.round(y)}</text>`;
+  }
+  for(let x=Math.ceil(b.xMin/xStep)*xStep; x<=b.xMax; x+=xStep){
+    svg += `<line class="gridline" x1="${sx(x,b)}" y1="${PAD.t}" x2="${sx(x,b)}" y2="${H-PAD.b}"/>`;
+    svg += `<text class="axlabel" x="${sx(x,b)}" y="${H-PAD.b+16}" text-anchor="middle">${Math.round(x)}</text>`;
+  }
+  svg += `<line class="axis" x1="${PAD.l}" y1="${PAD.t}" x2="${PAD.l}" y2="${H-PAD.b}"/>`;
+  svg += `<line class="axis" x1="${PAD.l}" y1="${H-PAD.b}" x2="${W-PAD.r}" y2="${H-PAD.b}"/>`;
+  svg += `<text class="axlabel" x="${PAD.l}" y="12" text-anchor="start">kg</text>`;
+  svg += `<text class="axlabel" x="${W-PAD.r}" y="${H-8}" text-anchor="end">mm — load center →</text>`;
+
+  visibleCurves().forEach(c=>{
+    if(c.points.length<2) return;
+    const d = c.points.map((p,i)=>`${i===0?'M':'L'}${sx(p.x,b)},${sy(p.y,b)}`).join(' ');
+    svg += `<path class="curve" d="${d}" style="stroke:${c.color}"/>`;
+    c.points.forEach(p=>{ svg += `<circle class="pt" cx="${sx(p.x,b)}" cy="${sy(p.y,b)}" r="3" fill="${c.color}"/>`; });
+  });
+
+  if(marker){
+    const mx = sx(marker.x,b), my = sy(marker.y,b);
+    svg += `<line class="marker" x1="${mx}" y1="${PAD.t}" x2="${mx}" y2="${my}"/>`;
+    svg += `<line class="marker" x1="${PAD.l}" y1="${my}" x2="${mx}" y2="${my}"/>`;
+    svg += `<circle cx="${mx}" cy="${my}" r="6" fill="var(--mint)" stroke="var(--line)" stroke-width="1.5"/>`;
+  }
+
+  document.getElementById('chart').innerHTML = svg;
+  document.getElementById('legend').innerHTML = visibleCurves().map(c=>`<div class="legend-item"><span class="swatch" style="background:${c.color}"></span>${c.name}</div>`).join('');
+}
+
+function renderEditors(){
+  const wrap = document.getElementById('curveEditors');
+  wrap.innerHTML = visibleCurves().map(c=>{
+    const i = curves.indexOf(c);
+    return `<div class="curve-edit" data-idx="${i}">
+      <div class="curve-edit-top">
+        <input type="color" class="cColor" value="${c.color}">
+        <input type="text" class="cName" value="${c.name}" placeholder="Nama kurva">
+        <button type="button" class="ghost cDel">HAPUS</button>
+      </div>
+      <div class="curve-edit-top">
+        <input type="number" class="cHeight" value="${c.height!=null?c.height:''}" placeholder="Tinggi (mm)">
+        <input type="text" class="cPoints" value="${pointsToStr(c.points)}">
+      </div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.curve-edit').forEach(el=>{
+    const idx = parseInt(el.dataset.idx);
+    el.querySelector('.cColor').addEventListener('input', e=>{ curves[idx].color=e.target.value; renderChart(); });
+    el.querySelector('.cName').addEventListener('input', e=>{ curves[idx].name=e.target.value; renderChart(); });
+    el.querySelector('.cHeight').addEventListener('change', e=>{ curves[idx].height=parseFloat(e.target.value); });
+    el.querySelector('.cPoints').addEventListener('change', e=>{ curves[idx].points=strToPoints(e.target.value); renderChart(); });
+    el.querySelector('.cDel').addEventListener('click', ()=>{ curves.splice(idx,1); renderEditors(); renderChart(); });
+  });
+}
+
+document.getElementById('addCurve').addEventListener('click', ()=>{
+  const color = defaultColors[curves.length % defaultColors.length];
+  curves.push({name:'Kurva baru', tyre:currentTyre(), color, points:[{x:500,y:1500},{x:1000,y:1000}]});
+  renderEditors(); renderChart();
+});
+document.getElementById('doubleTyre').addEventListener('change', ()=>{ marker=null; renderEditors(); renderChart(); });
+
+function showResult(cls, status, value, unit, note){
+  const r = document.getElementById('result');
+  r.className = 'result show ' + cls;
+  document.getElementById('status').textContent = status;
+  document.getElementById('num').textContent = value;
+  document.getElementById('unit').textContent = unit;
+  document.getElementById('note').textContent = note;
+}
+
+function fmt(n){ return Math.round(n).toLocaleString('id-ID'); }
+
+document.getElementById('modeSel').addEventListener('change', ()=>{
+  document.querySelectorAll('.mfield').forEach(f=>f.classList.remove('active'));
+  document.getElementById('f-'+document.getElementById('modeSel').value).classList.add('active');
+  document.getElementById('result').className = 'result';
+  marker = null; renderChart();
+});
+document.getElementById('f-cap').classList.add('active');
+
+document.getElementById('goBtn').addEventListener('click', ()=>{
+  const mode = document.getElementById('modeSel').value;
+  const sub = parseFloat(document.getElementById('sub').value)||0;
+
+  if(mode==='cap'){
+    const h = parseFloat(document.getElementById('cap_h').value);
+    const lc = parseFloat(document.getElementById('cap_lc').value);
+    if(isNaN(h)||isNaN(lc)) return;
+    let cap = capAt(h, lc);
+    if(cap===null){ showResult('', 'DATA KURANG', '-', '', 'Isi "Tinggi (mm)" di minimal 2 kurva pada EDIT DATA KURVA dulu.'); marker=null; renderChart(); return; }
+    cap = Math.max(0, cap - sub);
+    showResult('ok', 'KAPASITAS MAKSIMUM', fmt(cap), 'kg', 'Dihitung dari interpolasi tinggi & load center yang diisi.');
+    marker = {x:lc, y:cap};
+
+  } else if(mode==='lc'){
+    const w = parseFloat(document.getElementById('lc_w').value);
+    const h = parseFloat(document.getElementById('lc_h').value);
+    if(isNaN(w)||isNaN(h)) return;
+    const grid = lcGrid();
+    const curve = grid.map(lc=>({x:lc, y:capAt(h,lc)})).filter(p=>p.y!==null);
+    if(curve.length<2){ showResult('', 'DATA KURANG', '-', '', 'Isi "Tinggi (mm)" di minimal 2 kurva dulu.'); marker=null; renderChart(); return; }
+    const target = w + sub;
+    const r = inverseInterp(curve, target);
+    if(r.status==='over'){ showResult('danger', 'TIDAK BISA DIANGKAT', '-', '', `Beban ${fmt(w)} kg di tinggi ${fmt(h)} mm melebihi kapasitas bahkan di load center terkecil.`); marker=null; }
+    else if(r.status==='atmax'){ showResult('ok', 'LOAD CENTER MAKSIMUM', '≥ '+fmt(r.x), 'mm', 'Masih aman bahkan di load center terjauh pada data.'); marker={x:r.x, y:target}; }
+    else if(r.status==='ok'){ showResult('ok', 'LOAD CENTER MAKSIMUM', fmt(r.x), 'mm', 'Titik load center terjauh yang masih aman untuk beban & tinggi ini.'); marker={x:r.x, y:target}; }
+    else { showResult('', 'TIDAK DITEMUKAN', '-', '', 'Cek kembali data kurva.'); marker=null; }
+
+  } else if(mode==='h'){
+    const w = parseFloat(document.getElementById('h_w').value);
+    const lc = parseFloat(document.getElementById('h_lc').value);
+    if(isNaN(w)||isNaN(lc)) return;
+    const hc = visibleCurves()
+      .filter(c=>c.height!=null && !isNaN(c.height) && c.points.length>=2)
+      .map(c=>({x:c.height, y:interp(c.points, lc)}))
+      .filter(p=>p.y!==null)
+      .sort((a,b)=>a.x-b.x);
+    if(hc.length<2){ showResult('', 'DATA KURANG', '-', '', 'Isi "Tinggi (mm)" di minimal 2 kurva dulu.'); marker=null; renderChart(); return; }
+    const target = w + sub;
+    const r = inverseInterp(hc, target);
+    if(r.status==='over'){ showResult('danger', 'TIDAK BISA DIANGKAT', '-', '', `Beban ${fmt(w)} kg di load center ${fmt(lc)} mm melebihi kapasitas bahkan di tinggi terendah pada data.`); marker=null; }
+    else if(r.status==='atmax'){ showResult('ok', 'TINGGI MAKSIMUM', '≥ '+fmt(r.x), 'mm', 'Masih aman bahkan di tinggi terbesar pada data.'); marker={x:lc, y:target}; }
+    else if(r.status==='ok'){ showResult('ok', 'TINGGI MAKSIMUM', fmt(r.x), 'mm', 'Tinggi angkat terbesar yang masih aman untuk beban & load center ini.'); marker={x:lc, y:target}; }
+    else { showResult('', 'TIDAK DITEMUKAN', '-', '', 'Cek kembali data kurva.'); marker=null; }
+
+  } else if(mode==='safe'){
+    const h = parseFloat(document.getElementById('safe_h').value);
+    const lc = parseFloat(document.getElementById('safe_lc').value);
+    const w = parseFloat(document.getElementById('safe_w').value);
+    if(isNaN(h)||isNaN(lc)||isNaN(w)) return;
+    let cap = capAt(h, lc);
+    if(cap===null){ showResult('', 'DATA KURANG', '-', '', 'Isi "Tinggi (mm)" di minimal 2 kurva dulu.'); marker=null; renderChart(); return; }
+    cap = Math.max(0, cap - sub);
+    const margin = cap - w;
+    const pct = cap>0 ? Math.round(w/cap*100) : 0;
+    if(w<=cap){ showResult('ok', 'AMAN', fmt(margin), 'kg sisa kapasitas (masih bisa nambah segini)', `Kapasitas maks di titik ini ${fmt(cap)} kg. Beban sekarang pakai ${pct}% dari kapasitas.`); }
+    else { showResult('danger', 'MELEBIHI KAPASITAS', fmt(w-cap), 'kg kelebihan dari kapasitas maks', `Kapasitas maks di titik ini cuma ${fmt(cap)} kg, beban ${fmt(w)} kg. Turunkan beban, load center, atau tinggi angkat.`); }
+    marker = {x:lc, y:w};
+
+  } else if(mode==='barang'){
+    const p = parseFloat(document.getElementById('brg_p').value);
+    if(isNaN(p)) return;
+    const lc = p/2;
+    showResult('ok', 'PERKIRAAN LOAD CENTER', fmt(lc), 'mm', 'Pakai angka ini di mode "Kapasitas maksimum" atau lainnya buat lanjut ngitung. Kalau barang nggak simetris / titik berat nggak di tengah, ukur manual dari muka garpu ke titik berat aslinya.');
+    marker = null;
+  }
+  renderChart();
+});
+
+renderEditors();
+renderChart();
+
+// toggle single/double tyre (checkbox tersembunyi tetap jadi sumber state)
+document.querySelectorAll('#tyreStrip .toggle-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tyreStrip .toggle-btn').forEach(x=>x.classList.toggle('active',x===b));
+  const cb=document.getElementById('doubleTyre'); cb.checked = b.dataset.double==='1';
+  cb.dispatchEvent(new Event('change'));
+}));
+</script>
+<script>
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
